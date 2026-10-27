@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "puffx-hosting-backup-manager"
+version = "0.1.0"
+description = "Scheduled cPanel website and MySQL backups with verification and restore tools"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+sftp = ["paramiko>=3.4,<5"]
+
+[project.scripts]
+puffx-backup = "backup_manager:main"
+
+[tool.setuptools]
+py-modules = ["backup_manager"]

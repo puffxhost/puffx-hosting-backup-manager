@@ -1,0 +1,21 @@
+[backup]
+directory = "./backups"
+retention_count = 14
+paths = ["/home/CPANEL_USER/public_html"]
+
+[database]
+host = "localhost"
+port = 3306
+name = "CPANEL_USER_database"
+user = "CPANEL_USER_dbuser"
+password_env = "PUFFX_BACKUP_DB_PASSWORD"
+
+# Optional SFTP off-site copy. Configure a verified known_hosts file.
+[sftp]
+enabled = false
+host = "backup.example.com"
+port = 22
+username = "backup-user"
+password_env = "PUFFX_BACKUP_SFTP_PASSWORD"
+remote_directory = "/backups/CPANEL_USER"
+known_hosts = "~/.ssh/known_hosts"
