@@ -1,0 +1,7 @@
+config.toml
+backups/
+restore-review/
+*.log
+__pycache__/
+*.py[cod]
+.venv/
