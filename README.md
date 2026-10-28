@@ -1,38 +1,38 @@
 # 🌤️ Puffx Hosting Backup Manager
 
-**cPanel website aur MySQL database ke backups—step by step.** Yeh Python command-line tool website folders copy karta hai, `mysqldump` se database export leta hai, dono ko compressed archive mein rakhta hai, SHA-256 se archive verify karta hai aur purane local backups par retention apply karta hai. Optional SFTP se remote copy bhi bhej sakta hai.
+**Step-by-step backups for cPanel websites and MySQL databases.** This Python command-line tool copies website folders, exports the database with `mysqldump`, packages both into a compressed archive, verifies it with SHA-256, and applies a retention policy to older local backups. Optional SFTP support can send an off-site copy.
 
 ![Animated backup workflow](assets/backup-workflow.gif)
 
-> 🎞️ Upar animated GIF backup ka flow dikhata hai. Scalable vector version [assets/backup-workflow.svg](assets/backup-workflow.svg) mein bhi hai; kuch viewers SVG animation ko static dikha sakte hain.
+> 🎞️ The animated GIF shows the backup workflow. A scalable vector version is also available at [assets/backup-workflow.svg](assets/backup-workflow.svg); some viewers may display SVG animation as a static image.
 
-## 🧭 Is guide mein kya milega
+## 🧭 What this guide covers
 
-1. cPanel par requirements check karna
-2. Project download aur Python setup
-3. Backup folder, website paths aur database config karna
-4. Password secure rakhna
-5. Pehla backup banana aur verify karna
-6. cPanel Cron Job schedule karna
-7. Website files ya database restore karna
-8. Optional SFTP off-site copy lagana
-9. Common errors ko solve karna
+1. Checking cPanel requirements
+2. Downloading the project and setting up Python
+3. Configuring backup folders, website paths, and database details
+4. Protecting the database password
+5. Creating and verifying the first backup
+6. Scheduling a cPanel Cron Job
+7. Restoring website files or a database
+8. Setting up optional off-site SFTP copies
+9. Troubleshooting common errors
 
 ---
 
-## ✅ Pehle yeh cheezein ready karein
+## ✅ Before you begin
 
-- cPanel login aur **Terminal/SSH** access
-- cPanel mein **Cron Jobs** feature
-- Python **3.12 ya naya**
-- `mysqldump` aur `mysql` command line tools
-- Website directory read karne ki permission
-- MySQL database ka exact naam, username, password aur host
-- Backup ke liye home folder mein khaali disk space
+- cPanel login with **Terminal/SSH** access
+- The **Cron Jobs** feature in cPanel
+- Python **3.12 or newer**
+- The `mysqldump` and `mysql` command-line tools
+- Permission to read the website directory
+- The exact MySQL database name, username, password, and host
+- Enough free space in your home directory for backups
 
-### Step 0: cPanel Terminal mein requirements check karein
+### Step 0: Check requirements in cPanel Terminal
 
-cPanel kholen → **Terminal**, phir yeh commands ek-ek karke chalayein:
+Open cPanel → **Terminal**, then run these commands one at a time:
 
 ```sh
 python3.12 --version
@@ -40,30 +40,30 @@ mysqldump --version
 mysql --version
 ```
 
-**Expected:** Python version `3.12` ya zyada ho aur MySQL tools apna version dikhayein. Agar koi command `command not found` kahe, hosting provider se use enable karwayein. Tool ko Python 3.11 ya usse purane version par chalane ki koshish na karein.
+**Expected:** Python reports version `3.12` or newer, and the MySQL tools report their versions. If a command returns `command not found`, ask your hosting provider to enable it. Do not try to run this tool with Python 3.11 or older.
 
-### 🔐 Backup data ko public website se door rakhein
+### 🔐 Keep backup data outside the public website
 
-`public_html` web se accessible ho sakta hai. Backup archive mein database, user records, sessions aur site files ho sakte hain. Isliye config, password file, archives aur logs ko `/home/CPANEL_USER/` ke neeche rakhein—`public_html` ke andar nahin.
+`public_html` may be accessible from the web. Backup archives can contain database records, user sessions, and website files. Keep the config, password file, archives, and logs under `/home/CPANEL_USER/`—never inside `public_html`.
 
 ---
 
-# 🚀 Setup: poora step-by-step
+# 🚀 Setup: follow each step in order
 
-## Step 1 — Apna cPanel username aur home path note karein
+## Step 1 — Find your cPanel username and home path
 
-Terminal mein:
+In Terminal, run:
 
 ```sh
 whoami
 pwd
 ```
 
-`whoami` username dikhata hai. `pwd` ka output aksar `/home/CPANEL_USER` jaisa hota hai. Is guide mein jahan `CPANEL_USER` likha hai, wahan apna actual cPanel username likhein. **Commands mein placeholder ko jaisa ka taisa na chhodein.**
+`whoami` prints your username. `pwd` usually prints a path such as `/home/CPANEL_USER`. Replace every `CPANEL_USER` placeholder in this guide with your actual cPanel username. **Do not leave the placeholder unchanged in commands.**
 
-## Step 2 — Project ko home directory mein download karein
+## Step 2 — Download the project to your home directory
 
-Terminal mein:
+In Terminal, run:
 
 ```sh
 cd ~
@@ -73,24 +73,24 @@ pwd
 ls
 ```
 
-**Expected:** `pwd` ka path `/home/CPANEL_USER/backup-manager` ho; `ls` mein `backup_manager.py`, `config.example.toml` aur `pyproject.toml` dikhne chahiye.
+**Expected:** `pwd` shows `/home/CPANEL_USER/backup-manager`; `ls` shows `backup_manager.py`, `config.example.toml`, and `pyproject.toml`.
 
-### Agar `git` available nahin hai
+### If `git` is not available
 
-1. Browser mein [GitHub repository](https://github.com/puffxhost/puffx-hosting-backup-manager) kholein.
-2. **Code → Download ZIP** par click karein.
-3. cPanel **File Manager** se ZIP ko home folder mein upload karke extract karein. `public_html` ke andar extract na karein.
-4. Terminal mein extracted project folder par jaayein. Misal ke liye folder ka naam `puffx-hosting-backup-manager` ho to:
+1. Open the [GitHub repository](https://github.com/puffxhost/puffx-hosting-backup-manager) in your browser.
+2. Choose **Code → Download ZIP**.
+3. Use cPanel **File Manager** to upload and extract the ZIP in your home folder. Do not extract it inside `public_html`.
+4. In Terminal, change to the extracted project folder. For example, if the folder is named `puffx-hosting-backup-manager`, run:
 
 ```sh
 cd ~/puffx-hosting-backup-manager
 ```
 
-Aage ke steps mein `~/backup-manager` likha hai. ZIP method mein har jagah ise apne extracted folder ke path se replace karein.
+The remaining steps use `~/backup-manager`. If you used the ZIP method, replace it with the path to your extracted folder wherever it appears.
 
-## Step 3 — Virtual environment banayein
+## Step 3 — Create a virtual environment
 
-Virtual environment project ke Python packages ko alag rakhta hai:
+A virtual environment keeps this project's Python packages separate:
 
 ```sh
 cd ~/backup-manager
@@ -99,39 +99,39 @@ source .venv/bin/activate
 python --version
 ```
 
-**Expected:** prompt ke start mein `(.venv)` aur Python version `3.12` ya usse naya.
+**Expected:** `(.venv)` appears at the start of your prompt, and Python reports version `3.12` or newer.
 
-Agar `venv` module missing ho ya permission error aaye, hosting provider se Python virtual environment enable karwayein. System-wide `sudo pip` ki zaroorat nahin honi chahiye.
+If the `venv` module is missing or you get a permission error, ask your hosting provider to enable Python virtual environments. You should not need system-wide `sudo pip` access.
 
-## Step 4 — Tool install karein
+## Step 4 — Install the tool
 
-Virtual environment active rehne par:
+With the virtual environment active, run:
 
 ```sh
 python -m pip install --upgrade pip
 python -m pip install .
 ```
 
-**Expected:** install command errors ke bina complete ho. Is project mein core features ke liye third-party Python dependency nahin hai. Optional SFTP ke liye normal install ki jagah yeh command use karein:
+**Expected:** installation completes without errors. The core features have no third-party Python dependencies. If you want optional SFTP support, use this command instead of the normal install command:
 
 ```sh
 python -m pip install '.[sftp]'
 ```
 
-> Nayi Terminal session kholne par virtual environment phir activate karein: `cd ~/backup-manager && source .venv/bin/activate`.
+> In each new Terminal session, activate the environment again: `cd ~/backup-manager && source .venv/bin/activate`.
 
-## Step 5 — Backup directory banayein
+## Step 5 — Create the backup directory
 
-Apne username ka placeholder replace karein:
+Replace the username placeholder with yours:
 
 ```sh
 mkdir -p /home/CPANEL_USER/backups
 chmod 700 /home/CPANEL_USER/backups
 ```
 
-Yeh directory `public_html` se bahar hai aur sirf account owner ke liye accessible banayi gayi hai.
+This directory is outside `public_html` and is accessible only to the account owner.
 
-## Step 6 — Example config copy karein
+## Step 6 — Copy the example config
 
 ```sh
 cd ~/backup-manager
@@ -139,11 +139,11 @@ cp config.example.toml config.toml
 nano config.toml
 ```
 
-`nano` mein save: **Ctrl+O**, phir **Enter**. Exit: **Ctrl+X**. Is config ko GitHub par commit/share na karein; `.gitignore` mein `config.toml` pehle se excluded hai.
+In `nano`, save with **Ctrl+O**, then **Enter**. Exit with **Ctrl+X**. Do not commit or share this config on GitHub; `.gitignore` already excludes `config.toml`.
 
-## Step 7 — Website aur backup location set karein
+## Step 7 — Set the website and backup locations
 
-`config.toml` ke `[backup]` section ko apne paths ke saath set karein:
+Update the `[backup]` section in `config.toml` with your paths:
 
 ```toml
 [backup]
@@ -152,19 +152,19 @@ retention_count = 14
 paths = ["/home/CPANEL_USER/public_html"]
 ```
 
-- `directory`: Step 5 mein banaya folder.
-- `retention_count`: safal backup ke baad kitne recent **local** archives rakhne hain. Kam-se-kam `1` hona chahiye.
-- `paths`: ek ya zyada maujood website directories ke poore paths. Multiple folders ke liye TOML list mein comma laga kar aur entries jodein:
+- `directory`: the folder you created in Step 5.
+- `retention_count`: how many recent **local** archives to keep after a successful backup. It must be at least `1`.
+- `paths`: the full paths to one or more existing website directories. For multiple folders, add entries to the TOML list, separated by commas:
 
 ```toml
 paths = ["/home/CPANEL_USER/public_html", "/home/CPANEL_USER/store"]
 ```
 
-Har path pehle se directory hona chahiye. Program source folders ko `files/site-1`, `files/site-2` naam se archive karta hai; asli folder names archive mein preserve nahin hote. Relative paths se bachein; absolute paths use karein.
+Every path must already exist and be a directory. The tool stores source folders in the archive as `files/site-1`, `files/site-2`, and so on; it does not preserve their original folder names. Use absolute paths rather than relative paths.
 
-## Step 8 — Database details set karein
+## Step 8 — Set the database details
 
-cPanel → **MySQL Databases** kholein. Apni site ka database aur usse assigned user note karein. `[database]` section update karein:
+Open cPanel → **MySQL Databases**. Note the database used by your website and the user assigned to it. Update the `[database]` section:
 
 ```toml
 [database]
@@ -175,12 +175,12 @@ user = "CPANEL_USER_dbuser"
 password_env = "PUFFX_BACKUP_DB_PASSWORD"
 ```
 
-- `name` aur `user` mein cPanel par dikhne wale poore naam daalein—aksar naam ke aage cPanel username prefix hota hai.
-- `host` aur `port` hosting company ke mutabiq set karein. `localhost:3306` sirf common example hai.
-- Database user ko database par zaroori read/dump access milna chahiye. Restore ke liye us user ko write privileges bhi chahiye.
-- Password **TOML mein mat likhein**. Agle step mein use private environment file mein rakhenge.
+- Enter the full database `name` and `user` shown in cPanel—these often include your cPanel username as a prefix.
+- Set `host` and `port` according to your hosting provider. `localhost:3306` is only a common example.
+- The database user needs the privileges required to dump the database. Restoring also requires write privileges.
+- Do **not** put the password in the TOML file. The next step stores it in a private environment file.
 
-## Step 9 — Database password ko private environment file mein rakhein
+## Step 9 — Store the database password in a private environment file
 
 ```sh
 mkdir -p ~/.config/puffx-backup
@@ -188,24 +188,24 @@ chmod 700 ~/.config/puffx-backup
 nano ~/.config/puffx-backup/env.sh
 ```
 
-File mein yeh ek line likhein aur placeholder ko actual database password se replace karein:
+Add this line to the file and replace the placeholder with your actual database password:
 
 ```sh
-export PUFFX_BACKUP_DB_PASSWORD='APNA_DATABASE_PASSWORD'
+export PUFFX_BACKUP_DB_PASSWORD='YOUR_DATABASE_PASSWORD'
 ```
 
-Save/exit (**Ctrl+O**, **Enter**, **Ctrl+X**), phir:
+Save and exit (**Ctrl+O**, **Enter**, **Ctrl+X**), then run:
 
 ```sh
 chmod 600 ~/.config/puffx-backup/env.sh
 source ~/.config/puffx-backup/env.sh
 ```
 
-Config ka `password_env` aur `env.sh` ka `export` variable naam **letter-for-letter same** hona chahiye. Agar TOML mein naam badla, yahan bhi badlein. Password ko terminal command ke argument mein type karna avoid karein. Password mein single quote ho to yeh shell example seedha kaam nahin karega; hosting provider se protected environment variable set karne ka tareeqa lein.
+The `password_env` value in your config and the exported variable name in `env.sh` must match **exactly**. If you changed the name in the TOML file, change it here too. Avoid typing the password as a command-line argument. If your password contains a single quote (`'`), this shell example will not work as written; ask your provider how to set a protected environment variable.
 
-**File check:** `cat ~/.config/puffx-backup/env.sh` secret screen par dikhata hai, isliye use shared screen/log mein na chalayein. Sirf `ls -l ~/.config/puffx-backup/env.sh` se permissions verify karein; mode `-rw-------` hona chahiye.
+**Check the file permissions:** `cat ~/.config/puffx-backup/env.sh` displays the secret, so do not run it on a shared screen or save its output to a log. Check permissions with `ls -l ~/.config/puffx-backup/env.sh`; the mode should be `-rw-------`.
 
-## Step 10 — Config aur folders validate karein
+## Step 10 — Validate the config and folders
 
 ```sh
 cd ~/backup-manager
@@ -214,11 +214,11 @@ source ~/.config/puffx-backup/env.sh
 ls -ld /home/CPANEL_USER/backups /home/CPANEL_USER/public_html
 ```
 
-Dono paths ka exist karna zaroori hai. `config.toml` ko dobara khol kar username, folder path, DB name/user aur `password_env` check karein. Tool config load karte waqt website paths aur password environment variable check karta hai.
+Both paths must exist. Reopen `config.toml` and check the username, folder paths, database name/user, and `password_env`. When loading the config, the tool checks that the website paths exist and that the password environment variable is set.
 
-## Step 11 — Pehla backup manually banayein
+## Step 11 — Create the first backup manually
 
-Cron schedule karne se pehle manual run karein:
+Run this manually before scheduling a Cron Job:
 
 ```sh
 cd ~/backup-manager
@@ -232,71 +232,71 @@ source ~/.config/puffx-backup/env.sh
 Created verified backup: /home/CPANEL_USER/backups/backup-YYYYMMDDTHHMMSSZ.tar.gz
 ```
 
-Real timestamp alag hoga. Is run mein tool website folders stage karta hai, `mysqldump` se SQL banata hai, `.tar.gz` archive likhta hai, `.json` manifest/SHA-256 banata hai, verify karta hai, optional SFTP upload karta hai, phir verified purane local backups par retention lagata hai.
+The actual timestamp will differ. The tool stages the website folders, creates an SQL dump with `mysqldump`, writes a `.tar.gz` archive and a `.json` manifest with the SHA-256 digest, verifies the archive, uploads it over SFTP if enabled, then applies retention to older verified local backups.
 
-Agar pehla run fail ho, Cron Job abhi na banayein—**Troubleshooting** section mein error solve karein.
+If the first run fails, do not create the Cron Job yet. Fix the error first using the **Troubleshooting** section.
 
-## Step 12 — Archive verify karein
+## Step 12 — Verify the archive
 
 ```sh
 cd ~/backup-manager
 .venv/bin/python backup_manager.py verify --backup-dir /home/CPANEL_USER/backups
 ```
 
-**Expected:** har archive ke saamne `OK /home/.../backup-....tar.gz`. Verify command ko matching `.tar.gz.json` manifest bhi chahiye. Yeh archive ka naam, SHA-256 digest aur uske andar file inventory check karta hai. Koi archive na ho to `No backup archives found` aayega.
+**Expected:** each archive is followed by an `OK /home/.../backup-....tar.gz` message. Verification also requires the matching `.tar.gz.json` manifest. It checks the archive name, SHA-256 digest, and inventory of files inside the archive. If no archives are found, the command prints `No backup archives found`.
 
-Ek archive verify karna ho to:
+To verify one archive only:
 
 ```sh
 .venv/bin/python backup_manager.py verify --archive /home/CPANEL_USER/backups/backup-YYYYMMDDTHHMMSSZ.tar.gz
 ```
 
-## Step 13 — cPanel Cron Job schedule karein
+## Step 13 — Schedule a cPanel Cron Job
 
-Cron har din backup command apne aap chalata hai. Password ko Cron UI mein seedha paste nahin karna; command protected `env.sh` load karti hai.
+Cron runs the backup command automatically each day. Do not paste the password directly into the Cron UI; the command loads the protected `env.sh` file.
 
-1. cPanel → **Cron Jobs** kholein.
-2. Common Settings se **Once Per Day** select karein (ya apna desired schedule).
-3. Hour/minute choose karein. Misal: 02:30.
-4. Command box mein neeche ka command paste karein; `CPANEL_USER` ko apne username se replace karein:
+1. Open cPanel → **Cron Jobs**.
+2. Select **Once Per Day** under Common Settings (or choose your preferred schedule).
+3. Choose the hour and minute. For example: 02:30.
+4. Paste the command below into the command field. Replace `CPANEL_USER` with your username:
 
 ```sh
 /bin/bash -c 'source /home/CPANEL_USER/.config/puffx-backup/env.sh && cd /home/CPANEL_USER/backup-manager && /home/CPANEL_USER/backup-manager/.venv/bin/python backup_manager.py --config config.toml backup >> /home/CPANEL_USER/backup-manager/backup.log 2>&1'
 ```
 
-5. **Add New Cron Job** par click karein.
-6. Agle scheduled run ke baad `~/backup-manager/backup.log` dekhein. Successful run mein archive path aayega; error ho to log ka aakhri hissa padhein.
+5. Click **Add New Cron Job**.
+6. After the next scheduled run, check `~/backup-manager/backup.log`. A successful run prints the archive path; if there is an error, read the end of the log.
 
-🕒 Cron ka time server ke timezone mein hota hai. cPanel/provider se timezone confirm karein. `backup.log` project folder mein hai jo `public_html` ke bahar hona chahiye. Agar aapke host mein `/bin/bash` alag jagah hai to provider se sahi bash path lein.
+🕒 Cron runs in the server's timezone. Confirm the timezone with cPanel or your hosting provider. `backup.log` is in the project folder, which must be outside `public_html`. If Bash is not at `/bin/bash` on your host, ask your provider for its path.
 
 ---
 
 # ♻️ Restore guide
 
-> Restore se pehle archive **aur uske matching `.json` manifest** ki copy rakhein. Website restore pehle review folder mein hota hai. Database restore configured database ka data replace karta hai—pehle current database ka safety backup lena zaroori hai.
+> Before restoring, keep the archive **and its matching `.json` manifest** together. Website files are first extracted to a review folder. A database restore replaces data in the configured database, so first make a safety backup of the current database.
 
-## Website files ko review folder mein extract karein
+## Extract website files to a review folder
 
-1. Backup folder se archive ka exact naam dekhein:
+1. Find the exact archive name in the backup folder:
 
 ```sh
 ls -lh /home/CPANEL_USER/backups
 ```
 
-2. Timestamp wala archive path command mein daalein:
+2. Replace the timestamp in this command with the archive's actual timestamp:
 
 ```sh
 cd ~/backup-manager
 .venv/bin/python backup_manager.py restore-files --archive /home/CPANEL_USER/backups/backup-YYYYMMDDTHHMMSSZ.tar.gz --target /home/CPANEL_USER/restore-review
 ```
 
-3. Output `Files extracted for review to ...` hona chahiye.
-4. Extracted files `/home/CPANEL_USER/restore-review/files/site-1/` mein milengi. Dusre configured path ka data `site-2/` mein hoga.
-5. Files review/test karne ke baad aap manually hosting ke sahi live folder mein copy karein. Tool live website files ko khud overwrite nahin karta.
+3. The output should say `Files extracted for review to ...`.
+4. Extracted files will be in `/home/CPANEL_USER/restore-review/files/site-1/`. Data from a second configured path will be in `site-2/`.
+5. Review and test the files, then manually copy them to the correct live hosting folder. The tool does not overwrite live website files automatically.
 
-## MySQL database restore karein
+## Restore the MySQL database
 
-⚠️ **Yeh command configured database ke current data ko overwrite karti hai.** Pehle cPanel se current database ka separate safety backup lein aur target/archive confirm karein.
+⚠️ **This command overwrites the current data in the configured database.** First create a separate safety backup of the current database through cPanel and confirm the target and archive.
 
 ```sh
 cd ~/backup-manager
@@ -304,20 +304,20 @@ source ~/.config/puffx-backup/env.sh
 .venv/bin/python backup_manager.py --config config.toml restore-database --archive /home/CPANEL_USER/backups/backup-YYYYMMDDTHHMMSSZ.tar.gz --database-name CPANEL_USER_database --yes
 ```
 
-- `--archive` ko exact archive se badlein.
-- `--database-name` ko `[database] name` se **exact match** karna hoga.
-- `--yes` required confirmation switch hai. Isse tabhi chalayein jab safety backup bana liya ho aur target database sahi ho.
-- Matching `.tar.gz.json` manifest available rehni chahiye; restore se pehle archive verify hota hai.
+- Replace `--archive` with the exact archive path.
+- `--database-name` must **exactly match** the `[database] name` in the config.
+- `--yes` is a required confirmation switch. Use it only after making a safety backup and confirming the target database.
+- The matching `.tar.gz.json` manifest must be available; the archive is verified before restore.
 
 ---
 
-# ☁️ Optional SFTP off-site copy
+# ☁️ Optional off-site SFTP copy
 
-SFTP backup ki doosri copy doosre server par bhejta hai. Remote destination ka account, directory aur host-key fingerprint hosting/provider se pehle verify karein. SFTP disabled hi rehta hai jab tak `[sftp]` mein `enabled = true` na ho.
+SFTP sends a second backup copy to another server. Verify the remote account, directory, and host-key fingerprint with your provider first. SFTP stays disabled unless you set `enabled = true` in `[sftp]`.
 
 ## Option A — SFTP password
 
-`config.toml` ke existing `[sftp]` section ko update karein:
+Update the existing `[sftp]` section in `config.toml`:
 
 ```toml
 [sftp]
@@ -330,100 +330,100 @@ remote_directory = "/backups/CPANEL_USER"
 known_hosts = "/home/CPANEL_USER/.ssh/known_hosts"
 ```
 
-Remote directory pehle se create honi chahiye. Tool SFTP par folder create nahin karta aur remote purane backups delete nahin karta.
+Create the remote directory in advance. The tool does not create remote folders or automatically delete older remote backups.
 
-SFTP password ko bhi `env.sh` mein add karein:
+Add the SFTP password to `env.sh` as well:
 
 ```sh
-export PUFFX_BACKUP_DB_PASSWORD='APNA_DATABASE_PASSWORD'
-export PUFFX_BACKUP_SFTP_PASSWORD='APNA_SFTP_PASSWORD'
+export PUFFX_BACKUP_DB_PASSWORD='YOUR_DATABASE_PASSWORD'
+export PUFFX_BACKUP_SFTP_PASSWORD='YOUR_SFTP_PASSWORD'
 ```
 
-`chmod 600 ~/.config/puffx-backup/env.sh` dobara chalayein. Cron command yahi file load karta hai, isliye dono variables scheduled run ko milenge.
+Run `chmod 600 ~/.config/puffx-backup/env.sh` again. The Cron command loads this file, so both variables will be available to scheduled runs.
 
 ## Option B — SSH private key
 
-`[sftp]` section mein password environment variable ki jagah yeh set karein:
+Instead of a password environment variable, set this in the `[sftp]` section:
 
 ```toml
 key_file = "/home/CPANEL_USER/.ssh/backup_key"
 ```
 
-Private key file ko sirf account owner ke liye readable rakhein (misal `chmod 600 ~/.ssh/backup_key`). SFTP user ke server par matching public key authorized honi chahiye.
+Make the private key readable only by the account owner (for example, `chmod 600 ~/.ssh/backup_key`). The matching public key must be authorized on the SFTP server for that user.
 
-## SSH host key verify karna
+## Verify the SSH host key
 
-Tool unknown host keys ko reject karta hai. `known_hosts` file mein SFTP server ki verified host key honi chahiye. Provider se fingerprint trusted channel par lein, uska milan provider ke diye fingerprint se karein, phir host key file mein add karein. Sirf `ssh-keyscan` ka output bina alag fingerprint verification ke trusted na maanein. Host key mismatch ho to provider se confirm karein—verification disable na karein.
+The tool rejects unknown host keys. The `known_hosts` file must contain the SFTP server's verified host key. Get the fingerprint from your provider through a trusted channel, compare it with the fingerprint they provide, and then add the host key to the file. Do not trust `ssh-keyscan` output without separately verifying the fingerprint. If the host key does not match, confirm it with your provider—do not disable verification.
 
-SFTP setup ke baad pehla backup manually chala kar remote par archive aur uski `.json` manifest dono check karein. SFTP upload fail hua to backup command error degi; cPanel `backup.log` check karein.
+After setting up SFTP, run a backup manually and confirm that both the archive and its `.json` manifest arrive at the remote location. If the upload fails, the backup command returns an error; check `backup.log` in cPanel.
 
 ---
 
 # 🧰 Troubleshooting
 
-| Error / symptom | Kya check karein |
+| Error / symptom | What to check |
 |---|---|
-| `python3.12: command not found` | Host se Python 3.12 enable karwayein; available Python version 3.12+ hona chahiye. |
-| `No module named venv` | Provider se virtual environment support enable karwayein. |
-| `Every configured backup path must exist and be a directory` | `[backup] paths` ke har absolute path ki spelling aur permissions check karein. |
-| `Set environment variable ... before running` | `source ~/.config/puffx-backup/env.sh` chalayein; TOML ka `password_env` aur exported name same ho. Cron command mein env file ka path sahi ho. |
-| `mysqldump failed` | `mysqldump --version`, DB host/port/name/user, password aur DB user permissions check karein; provider se MySQL host confirm karein. |
-| `mysql restore failed` | Restore user ke write privileges aur database availability check karein. Restore existing data replace karta hai. |
-| `No backup archives found` | `--backup-dir` ko `[backup] directory` ke actual folder se match karein. |
-| `Archive checksum or name does not match the manifest` | Archive aur `.tar.gz.json` sidecar ka pair check karein; transfer/copy ke dauran file badli ya truncate to nahin hui. Dono files same backup se honi chahiye. |
-| `Archive contents do not match manifest inventory` | Archive aur manifest mismatched/corrupt ho sakte hain; doosra verified backup use karein. |
-| Cron ke baad archive nahin bana | `backup.log`, absolute paths, `.venv/bin/python`, `/bin/bash`, env file permissions aur cPanel ka server timezone check karein. Pehle wahi command Terminal mein manual chalayein. |
-| `No such file or directory: known_hosts` / SFTP host-key error | `known_hosts` path/file aur verified server host key check karein. Unknown host key accept na karein. |
-| SFTP upload par permission/path error | Remote folder pehle se create ho, SFTP account ko write permission ho, host/port/username sahi hon. |
+| `python3.12: command not found` | Ask your host to enable Python 3.12; the available version must be 3.12 or newer. |
+| `No module named venv` | Ask your provider to enable virtual environment support. |
+| `Every configured backup path must exist and be a directory` | Check the spelling and permissions of every absolute path in `[backup] paths`. |
+| `Set environment variable ... before running` | Run `source ~/.config/puffx-backup/env.sh`; the TOML `password_env` and exported name must match. Check the env file path in the Cron command. |
+| `mysqldump failed` | Check `mysqldump --version`, database host/port/name/user, password, and database user privileges. Confirm the MySQL host with your provider. |
+| `mysql restore failed` | Check the restore user's write privileges and database availability. Restore replaces existing data. |
+| `No backup archives found` | Match `--backup-dir` to the actual folder set in `[backup] directory`. |
+| `Archive checksum or name does not match the manifest` | Check that the archive and `.tar.gz.json` sidecar belong together and were not changed or truncated during transfer. |
+| `Archive contents do not match manifest inventory` | The archive and manifest may be mismatched or corrupt; use another verified backup. |
+| No archive after a Cron run | Check `backup.log`, absolute paths, `.venv/bin/python`, `/bin/bash`, env file permissions, and the server timezone. First run the same command manually in Terminal. |
+| `No such file or directory: known_hosts` / SFTP host-key error | Check the `known_hosts` path/file and verified server host key. Do not accept an unknown host key. |
+| SFTP permission or path error | Make sure the remote folder exists, the SFTP account can write to it, and the host/port/username are correct. |
 
-Agar issue solve na ho to hosting provider ko exact error aur `backup.log` ka relevant hissa dein. **Password, private SSH key, database dump ya archive unke saath share na karein.**
+If the issue persists, give your hosting provider the exact error and relevant part of `backup.log`. **Do not share your password, private SSH key, database dump, or archive.**
 
 ---
 
-# 📦 Backup ke andar kya hota hai?
+# 📦 What is inside a backup?
 
-Har successful backup do files banata hai:
+Each successful backup creates two files:
 
-- `backup-<UTC timestamp>.tar.gz` — configured website directories aur `database/database.sql`.
-- `backup-<UTC timestamp>.tar.gz.json` — archive ka naam, UTC creation time, SHA-256 checksum aur file inventory.
+- `backup-<UTC timestamp>.tar.gz` — the configured website directories and `database/database.sql`.
+- `backup-<UTC timestamp>.tar.gz.json` — the archive name, UTC creation time, SHA-256 checksum, and file inventory.
 
-Timestamp UTC format mein hota hai, jaise `backup-20261028T203000Z.tar.gz`. Tool local backups ko newest-first rakhta hai. `retention_count = 14` hone par safal backup ke baad extra **verified local** archives remove kiye ja sakte hain. SFTP remote files automatically delete nahin hoti.
+Timestamps use UTC, for example `backup-20261028T203000Z.tar.gz`. The tool keeps local backups newest-first. With `retention_count = 14`, older **verified local** archives may be removed after a successful backup. Remote SFTP files are never deleted automatically.
 
 ## Available commands
 
-Project directory se chalayein:
+Run these from the project directory:
 
 ```sh
-# Naya backup + verify + optional SFTP + local retention
+# Create a backup, verify it, optionally upload over SFTP, and apply local retention
 .venv/bin/python backup_manager.py --config config.toml backup
 
-# Backup directory ke sab archives verify karein
+# Verify every archive in a backup directory
 .venv/bin/python backup_manager.py verify --backup-dir /home/CPANEL_USER/backups
 
-# Ek specific archive verify karein
+# Verify one specific archive
 .venv/bin/python backup_manager.py verify --archive /home/CPANEL_USER/backups/backup-TIMESTAMP.tar.gz
 
-# Verified website files ko review location par extract karein
+# Extract verified website files to a review location
 .venv/bin/python backup_manager.py restore-files --archive /path/backup-TIMESTAMP.tar.gz --target /path/restore-review
 
-# Configured database par restore (overwrite; --yes required)
+# Restore the configured database (overwrites data; --yes is required)
 .venv/bin/python backup_manager.py --config config.toml restore-database --archive /path/backup-TIMESTAMP.tar.gz --database-name DB_NAME --yes
 ```
 
-`--config` ko subcommand se pehle likhein. `backup` aur `restore-database` ke liye password environment variable loaded hona chahiye. `verify` aur `restore-files` database password nahin maangte.
+Put `--config` before the subcommand. `backup` and `restore-database` require the password environment variable to be loaded. `verify` and `restore-files` do not require a database password.
 
 ---
 
-# 🔒 Security aur limitations
+# 🔒 Security and limitations
 
-- `config.toml`, password environment file, archives, manifests aur logs ko `public_html` ke bahar rakhein.
-- Database/SFTP passwords Git mein commit na karein; private keys aur config ko share na karein.
-- Backups mein sensitive/customer data ho sakta hai. Disk quota, retention aur access regularly check karein. Hosting provider ki encrypted storage ka option use karein.
-- Archive par restrictive file mode lagta hai, lekin backup directory aur host permissions phir bhi secure rakhein.
-- SFTP host-key checking enabled hai; unknown host ko reject kiya jata hai.
-- Restore ko pehle review karein; database restore overwrite karta hai.
-- Yeh version dashboard, cPanel API integration, VPS agent, built-in encryption ya automated restore drills provide nahin karta.
-- Backup successful hona restore test ke barabar nahin. Important site ke liye restore process ko safe/staging environment par manually test karein.
+- Keep `config.toml`, the password environment file, archives, manifests, and logs outside `public_html`.
+- Never commit database/SFTP passwords, private keys, or config files to Git or share them.
+- Backups may contain sensitive customer data. Check disk quota, retention, and access regularly. Use your hosting provider's encrypted storage option where available.
+- The tool sets restrictive file permissions on archives, but you must also secure the backup directory and host account.
+- SFTP host-key checking is enabled; unknown hosts are rejected.
+- Review files before restoring them; database restore overwrites existing data.
+- This version does not include a dashboard, cPanel API integration, VPS agent, built-in encryption, or automated restore drills.
+- A successful backup is not the same as a tested restore. For important sites, manually test the restore process in a safe/staging environment.
 
-📘 Additional notes: [SECURITY.md](SECURITY.md) · 🐛 Bug report: [GitHub Issues](https://github.com/puffxhost/puffx-hosting-backup-manager/issues) · 📄 License: [MIT](LICENSE)
+📘 Additional notes: [SECURITY.md](SECURITY.md) · 🐛 Bug reports: [GitHub Issues](https://github.com/puffxhost/puffx-hosting-backup-manager/issues) · 📄 License: [MIT](LICENSE)
 
