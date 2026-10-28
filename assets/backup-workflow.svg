@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="330" viewBox="0 0 1000 330" role="img" aria-labelledby="title desc">
+  <title id="title">Puffx backup workflow</title>
+  <desc id="desc">Animated flow from website and database through archive, checksum verification, and local or optional SFTP storage.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#101a35"/><stop offset="1" stop-color="#192b4c"/></linearGradient>
+    <linearGradient id="accent" x1="0" x2="1"><stop stop-color="#42d6c5"/><stop offset="1" stop-color="#7c91ff"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#f3f7ff}
+      .sub{fill:#b7c5dd;font-size:13px}.title{font-size:17px;font-weight:700}.tag{fill:#8da2c5;font-size:11px;letter-spacing:1.5px;font-weight:700}
+      .card{fill:#1d3154;stroke:#3b5279;stroke-width:1.5}.line{stroke:#536b91;stroke-width:3;stroke-linecap:round}
+      .dash{stroke:url(#accent);stroke-width:4;stroke-linecap:round;stroke-dasharray:9 13;animation:travel 1.2s linear infinite}
+      .pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.5s ease-in-out infinite}
+      .float{animation:float 2.4s ease-in-out infinite}
+      @keyframes travel{to{stroke-dashoffset:-44}} @keyframes pulse{0%,100%{transform:scale(1);opacity:.72}50%{transform:scale(1.16);opacity:1}} @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+      @media(prefers-reduced-motion:reduce){.dash,.pulse,.float{animation:none}}
+    </style>
+  </defs>
+  <rect width="1000" height="330" rx="22" fill="url(#bg)"/>
+  <text x="42" y="47" class="tag">PUFFX HOSTING BACKUP MANAGER</text>
+  <text x="42" y="78" font-size="24" font-weight="750">Aapka backup, step by step ✨</text>
+  <text x="42" y="103" class="sub">Website + MySQL → archive → integrity check → protected storage</text>
+  <path d="M185 190H815" class="line"/><path d="M185 190H815" class="dash"/>
+  <g class="float"><rect x="35" y="139" width="190" height="112" rx="16" class="card"/><circle cx="69" cy="177" r="18" fill="#28466f"/><text x="69" y="184" text-anchor="middle" font-size="21">🌐</text><text x="96" y="177" class="title">1. Source</text><text x="55" y="218" class="sub">Website files + MySQL</text></g>
+  <g class="float" style="animation-delay:.2s"><rect x="235" y="139" width="190" height="112" rx="16" class="card"/><circle cx="269" cy="177" r="18" fill="#28466f"/><text x="269" y="184" text-anchor="middle" font-size="21">📦</text><text x="296" y="177" class="title">2. Archive</text><text x="255" y="218" class="sub">Timestamped .tar.gz</text></g>
+  <g class="float" style="animation-delay:.4s"><rect x="435" y="139" width="190" height="112" rx="16" class="card"/><circle cx="469" cy="177" r="18" fill="#28466f"/><text x="469" y="184" text-anchor="middle" font-size="21">🔎</text><text x="496" y="177" class="title">3. Verify</text><text x="455" y="218" class="sub">SHA-256 + file inventory</text></g>
+  <g class="float" style="animation-delay:.6s"><rect x="635" y="139" width="190" height="112" rx="16" class="card"/><circle cx="669" cy="177" r="18" fill="#28466f"/><text x="669" y="184" text-anchor="middle" font-size="21">🗄️</text><text x="696" y="177" class="title">4. Store</text><text x="655" y="218" class="sub">Local + optional SFTP</text></g>
+  <g class="pulse" filter="url(#glow)"><circle cx="864" cy="190" r="29" fill="#1b775f"/><text x="864" y="199" text-anchor="middle" font-size="26">✓</text></g>
+  <text x="864" y="241" text-anchor="middle" class="sub">Ready</text>
+  <text x="42" y="298" class="sub">🔒 Secrets env vars mein rakhein  ·  🕒 cPanel Cron se schedule karein  ·  ♻️ Restore pehle review karein</text>
+</svg>
+
